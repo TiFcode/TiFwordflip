@@ -351,6 +351,10 @@
           <span class="label">Wrong</span>
           <span class="value" id="wrongCount">0</span>
         </div>
+        <div class="score-pill">
+          <span class="label">Discarded</span>
+          <span class="value" id="discardedCount">0</span>
+        </div>
         <div class="deck-pill">
           <span class="label">Remaining</span>
           <span class="value" id="remainingCount">0</span>
@@ -397,6 +401,7 @@
   const stackArea = document.getElementById('stackArea');
   const correctEl = document.getElementById('correctCount');
   const wrongEl = document.getElementById('wrongCount');
+  const discardedEl = document.getElementById('discardedCount');
   const remainingEl = document.getElementById('remainingCount');
   const hintBar = document.getElementById('hintBar');
   const emptyState = document.getElementById('emptyState');
@@ -404,9 +409,9 @@
   const wrongBtn = document.getElementById('wrongBtn');
   const correctBtn = document.getElementById('correctBtn');
 
-  let zIndex = 1;
+  let zIndex = 10;
   let activeCard = null;
-  let stats = { correct: 0, wrong: 0 };
+  let stats = { correct: 0, wrong: 0, discarded: 0 };
   let deck = [];
   let completed = [];
 
@@ -426,6 +431,7 @@
   function updateScoreboard() {
     correctEl.textContent = stats.correct;
     wrongEl.textContent = stats.wrong;
+    discardedEl.textContent = stats.discarded;
     remainingEl.textContent = deck.length;
   }
 
@@ -492,7 +498,7 @@
       revealPending: false
     };
 
-    card.style.zIndex = zIndex++;
+    card.style.zIndex = '1';
     updateCardTransform(card);
     attachCardEvents(card);
     stackArea.appendChild(card);
@@ -514,17 +520,21 @@
   function attachCardEvents(card) {
     card.addEventListener('pointerdown', (e) => onPointerDown(card, e));
     card.addEventListener('click', () => {
+      bringCardToFront(card);
       if (card._state.dragging || card._state.judged || card._state.moved) return;
       if (!card._state.flipped) revealCard(card);
     });
   }
 
+  function bringCardToFront(card) {
+    card.style.zIndex = String(zIndex++);
+  }
+
   function revealCard(card) {
-    if (activeCard && activeCard !== card) return;
-    card._state.flipped = true;
     activeCard = card;
+    card._state.flipped = true;
     card.classList.add('revealed');
-    card.style.zIndex = zIndex++;
+    bringCardToFront(card);
     animateCardBack(card);
     showJudgeButtons(card);
     setHint(`"${card._state.item.en}" → did you know "${card._state.item.de}"? Swipe right for yes, left for no.`);
@@ -532,9 +542,10 @@
 
   function onPointerDown(card, e) {
     if (card._state.judged) return;
-    if (activeCard && activeCard !== card && activeCard._state.flipped) return;
 
     e.preventDefault();
+    bringCardToFront(card);
+    activeCard = card;
     card.setPointerCapture(e.pointerId);
     card._state.dragging = true;
     card._state.pointerId = e.pointerId;
@@ -596,8 +607,12 @@
     const strongThrow = Math.abs(dx) > 110 || Math.abs(card._state.velocityX) > 850;
 
     if (strongThrow) {
-      const knewIt = dx > 0;
-      judgeCard(card, knewIt);
+      if (!card._state.flipped) {
+        judgeCard(card, false, true);
+      } else {
+        const knewIt = dx > 0;
+        judgeCard(card, knewIt, false);
+      }
       return;
     }
 
@@ -615,17 +630,18 @@
     setTimeout(() => { card.style.transition = ''; }, 380);
   }
 
-  function judgeCard(card, knewIt) {
+  function judgeCard(card, knewIt, discarded = false) {
     if (!card || card._state.judged) return;
     card._state.judged = true;
     card.classList.add('done');
     hideJudgeButtons();
 
-    if (knewIt) stats.correct += 1;
+    if (discarded) stats.discarded += 1;
+    else if (knewIt) stats.correct += 1;
     else stats.wrong += 1;
     updateScoreboard();
 
-    const direction = knewIt ? 1 : -1;
+    const direction = discarded ? (card._state.velocityX >= 0 ? 1 : -1) : (knewIt ? 1 : -1);
     const endX = direction > 0 ? window.innerWidth + 260 : -420;
     const endY = card._state.y + randomRange(-40, 40);
     const endRot = card._state.rotation + direction * randomRange(18, 34);
@@ -640,7 +656,11 @@
     const finishedItem = card._state.item;
     activeCard = null;
     completed.push(finishedItem);
-    setHint(knewIt ? `Nice. "${finishedItem.en}" → "${finishedItem.de}" counted as correct.` : `No problem. "${finishedItem.en}" → "${finishedItem.de}" counted as wrong.`);
+    if (discarded) {
+      setHint(`Discarded "${finishedItem.en}" without scoring it.`);
+    } else {
+      setHint(knewIt ? `Nice. "${finishedItem.en}" → "${finishedItem.de}" counted as correct.` : `No problem. "${finishedItem.en}" → "${finishedItem.de}" counted as wrong.`);
+    }
 
     setTimeout(() => {
       card.remove();
@@ -675,7 +695,7 @@
   }
 
   function startGame(shuffleWords = true) {
-    stats = { correct: 0, wrong: 0 };
+    stats = { correct: 0, wrong: 0, discarded: 0 };
     completed = [];
     deck = shuffleWords ? shuffle(WORDS) : [...WORDS];
     updateScoreboard();
