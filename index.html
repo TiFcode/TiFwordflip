@@ -175,6 +175,10 @@
     box-shadow: 0 24px 60px rgba(0,0,0,0.4);
   }
 
+  .card.active-card .card-face {
+    box-shadow: 0 18px 42px rgba(0,0,0,0.28), 0 0 0 3px rgba(124,58,237,0.18);
+  }
+
   .card-face {
     position: absolute;
     inset: 0;
@@ -545,10 +549,20 @@
     card.addEventListener('pointerup', (e) => onPointerUp(card, e));
     card.addEventListener('pointercancel', (e) => onPointerUp(card, e));
     card.addEventListener('click', () => {
-      bringCardToFront(card);
-      if (card._state.dragging || card._state.judged || card._state.moved) return;
+      if (card._state.judged) return;
+      setActiveCard(card);
+      if (card._state.dragging || card._state.moved) return;
       if (!card._state.flipped) revealCard(card);
     });
+  }
+
+  function setActiveCard(card) {
+    if (!card || card._state.judged) return;
+    activeCard = card;
+    bringCardToFront(card);
+    for (const other of stackArea.querySelectorAll('.card')) {
+      other.classList.toggle('active-card', other === card);
+    }
   }
 
   function bringCardToFront(card) {
@@ -556,10 +570,9 @@
   }
 
   function revealCard(card) {
-    activeCard = card;
+    setActiveCard(card);
     card._state.flipped = true;
     card.classList.add('revealed');
-    bringCardToFront(card);
     animateCardBack(card);
     showJudgeButtons(card);
     setHint(`"${card._state.item.en}" → did you know "${card._state.item.de}"? Swipe right for yes, left for no.`);
@@ -587,8 +600,7 @@
     if (card._state.judged) return;
 
     e.preventDefault();
-    bringCardToFront(card);
-    activeCard = card;
+    setActiveCard(card);
     card.setPointerCapture(e.pointerId);
     card._state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     card._state.dragging = true;
@@ -716,7 +728,8 @@
     updateCardTransform(card);
 
     const finishedItem = card._state.item;
-    activeCard = null;
+    if (activeCard === card) activeCard = null;
+    card.classList.remove('active-card');
     completed.push(finishedItem);
     if (discarded) {
       setHint(`Discarded "${finishedItem.en}" without scoring it.`);
