@@ -591,14 +591,22 @@
 
   function getStackSlot(index) {
     const cardWidth = Math.min(window.innerWidth * 0.30, 230);
-    const spreadX = Math.min(120, Math.max(64, cardWidth * 0.42));
-    const spreadY = Math.min(72, Math.max(28, cardWidth * 0.12));
-    const startX = Math.max(20, (stackArea.clientWidth - cardWidth - spreadX * 4) / 2);
-    const startY = Math.max(110, Math.min(stackArea.clientHeight - 320, 150 + (index % 2) * 10));
+    const isMobile = window.innerWidth < 700;
+    const columns = isMobile ? 2 : 3;
+    const gapX = isMobile ? Math.max(24, cardWidth * 0.18) : Math.max(28, cardWidth * 0.14);
+    const gapY = isMobile ? 28 : 36;
+    const rows = Math.ceil(5 / columns);
+    const layoutWidth = columns * cardWidth + (columns - 1) * gapX;
+    const layoutHeight = rows * (cardWidth * 1.33) + (rows - 1) * gapY;
+    const startX = Math.max(18, (stackArea.clientWidth - layoutWidth) / 2);
+    const startY = Math.max(110, Math.min(stackArea.clientHeight - layoutHeight - 30, 130));
+    const row = Math.floor(index / columns);
+    const col = index % columns;
+    const rowOffset = row % 2 === 0 ? 0 : (isMobile ? cardWidth * 0.18 : cardWidth * 0.12);
     return {
-      x: startX + index * spreadX,
-      y: startY + (index % 2) * spreadY,
-      rotation: -10 + index * 5
+      x: startX + rowOffset + col * (cardWidth + gapX),
+      y: startY + row * (cardWidth * 1.33 + gapY),
+      rotation: [-8, -3, 4, -5, 7][index] || 0
     };
   }
 
@@ -802,6 +810,7 @@
       card._state.x = layout.x;
       card._state.y = layout.y;
       if (!card._state.flipped) card._state.rotation = layout.rotation;
+      if (!card._state.dragging) card._state.scale = 1;
       card.style.transition = 'transform 0.35s cubic-bezier(.22,.8,.22,1)';
       updateCardTransform(card);
       setTimeout(() => { card.style.transition = ''; }, 350);
