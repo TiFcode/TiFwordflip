@@ -496,7 +496,8 @@
       startMidX: 0,
       startMidY: 0,
       startDistance: 0,
-      startAngle: 0
+      startAngle: 0,
+      justActivated: false
     };
 
     card.style.zIndex = '1';
@@ -525,10 +526,16 @@
     card.addEventListener('pointercancel', (e) => onPointerUp(card, e));
     card.addEventListener('click', () => {
       if (card._state.judged) return;
-      const wasActive = activeCard === card;
-      setActiveCard(card);
       if (card._state.dragging || card._state.moved) return;
-      if (wasActive && !card._state.flipped) revealCard(card);
+      if (card._state.justActivated) {
+        card._state.justActivated = false;
+        return;
+      }
+      if (activeCard !== card) {
+        setActiveCard(card);
+        return;
+      }
+      if (!card._state.flipped) revealCard(card);
     });
   }
 
@@ -595,6 +602,7 @@
     if (card._state.judged) return;
 
     e.preventDefault();
+    card._state.justActivated = activeCard !== card;
     setActiveCard(card);
     card.setPointerCapture(e.pointerId);
     card._state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -680,6 +688,7 @@
     card._state.dragging = false;
 
     card._state.revealPending = false;
+    setTimeout(() => { card._state.justActivated = false; }, 0);
     startMomentum(card);
   }
 
