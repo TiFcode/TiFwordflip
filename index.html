@@ -698,14 +698,13 @@
       card._state.rotation += vx * 0.01 * dt;
       updateCardTransform(card);
 
-      const cardWidth = Math.min(window.innerWidth * 0.30, 230) * card._state.scale;
-      const cardHeight = Math.min(window.innerWidth * 0.30, 230) * (4 / 3) * card._state.scale;
+      const cardWidth = card.offsetWidth * card._state.scale;
+      const cardHeight = card.offsetHeight * card._state.scale;
       const centerX = card._state.x + cardWidth / 2;
       const centerY = card._state.y + cardHeight / 2;
-      const outsideByMargin = centerX < -80 || centerX > stackArea.clientWidth + 80 || centerY < -80 || centerY > stackArea.clientHeight + 80;
-      const strongEnough = Math.abs(vx) > 260 || Math.abs(vy) > 260;
+      const centerOutside = centerX < 0 || centerX > stackArea.clientWidth || centerY < 0 || centerY > stackArea.clientHeight;
 
-      if (outsideByMargin && strongEnough && card._state.scale <= 1.12) {
+      if (centerOutside && card._state.scale <= 1.12) {
         card._state.momentumFrame = null;
         const knewIt = vx > 0;
         if (!card._state.flipped) judgeCard(card, false, true);
