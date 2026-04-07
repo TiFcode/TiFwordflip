@@ -400,7 +400,19 @@
     ['milk', 'Milch'], ['cheese', 'Käse'], ['train', 'Zug'], ['street', 'Straße'], ['garden', 'Garten'],
     ['kitchen', 'Küche'], ['bed', 'Bett'], ['shirt', 'Hemd'], ['shoe', 'Schuh'], ['rain', 'Regen'],
     ['snow', 'Schnee'], ['summer', 'Sommer'], ['winter', 'Winter'], ['morning', 'Morgen'], ['night', 'Nacht'],
-    ['schoolbag', 'Schultasche'], ['picture', 'Bild'], ['clock', 'Uhr'], ['ball', 'Ball'], ['game', 'Spiel']
+    ['schoolbag', 'Schultasche'], ['picture', 'Bild'], ['clock', 'Uhr'], ['ball', 'Ball'], ['game', 'Spiel'],
+    ['day', 'Tag'], ['week', 'Woche'], ['year', 'Jahr'], ['child', 'Kind'], ['mother', 'Mutter'],
+    ['father', 'Vater'], ['brother', 'Bruder'], ['sister', 'Schwester'], ['baby', 'Baby'], ['teacher', 'Lehrer'],
+    ['student', 'Schüler'], ['city', 'Stadt'], ['village', 'Dorf'], ['country', 'Land'], ['river', 'Fluss'],
+    ['mountain', 'Berg'], ['sea', 'Meer'], ['forest', 'Wald'], ['grass', 'Gras'], ['leaf', 'Blatt'],
+    ['fruit', 'Obst'], ['vegetable', 'Gemüse'], ['potato', 'Kartoffel'], ['tomato', 'Tomate'], ['banana', 'Banane'],
+    ['orange', 'Orange'], ['strawberry', 'Erdbeere'], ['egg', 'Ei'], ['butter', 'Butter'], ['soup', 'Suppe'],
+    ['plate', 'Teller'], ['cup', 'Tasse'], ['glass', 'Glas'], ['fork', 'Gabel'], ['knife', 'Messer'],
+    ['spoon', 'Löffel'], ['bag', 'Tasche'], ['hat', 'Hut'], ['jacket', 'Jacke'], ['pants', 'Hose'],
+    ['dress', 'Kleid'], ['sock', 'Socke'], ['hand', 'Hand'], ['head', 'Kopf'], ['eye', 'Auge'],
+    ['ear', 'Ohr'], ['nose', 'Nase'], ['mouth', 'Mund'], ['tooth', 'Zahn'], ['foot', 'Fuß'],
+    ['bus', 'Bus'], ['bicycle', 'Fahrrad'], ['plane', 'Flugzeug'], ['boat', 'Boot'], ['road', 'Straße'],
+    ['bridge', 'Brücke'], ['shop', 'Laden'], ['market', 'Markt'], ['park', 'Park'], ['farm', 'Bauernhof']
   ].map(([en, de], index) => ({ id: index + 1, en, de }));
 
   const stackArea = document.getElementById('stackArea');
@@ -737,7 +749,7 @@
     hideJudgeButtons();
     backZIndex = 1;
 
-    const visible = Math.min(6, deck.length);
+    const visible = Math.min(5, deck.length);
     for (let i = 0; i < visible; i++) {
       drawNextCard();
     }
