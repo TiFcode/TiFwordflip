@@ -493,9 +493,10 @@
       <div class="swipe-badge right">Knew it ➡️</div>
     `;
 
-    const baseX = randomRange(30, Math.max(40, stackArea.clientWidth - 280));
-    const baseY = randomRange(90, Math.max(120, stackArea.clientHeight - 340));
-    const rotation = randomRange(-16, 16);
+    const layout = getStackSlot(index);
+    const baseX = layout.x;
+    const baseY = layout.y;
+    const rotation = layout.rotation;
 
     card._state = {
       x: baseX,
@@ -576,6 +577,19 @@
     animateCardBack(card);
     showJudgeButtons(card);
     setHint(`"${card._state.item.en}" → did you know "${card._state.item.de}"? Swipe right for yes, left for no.`);
+  }
+
+  function getStackSlot(index) {
+    const cardWidth = Math.min(window.innerWidth * 0.30, 230);
+    const spreadX = Math.min(120, Math.max(64, cardWidth * 0.42));
+    const spreadY = Math.min(72, Math.max(28, cardWidth * 0.12));
+    const startX = Math.max(20, (stackArea.clientWidth - cardWidth - spreadX * 4) / 2);
+    const startY = Math.max(110, Math.min(stackArea.clientHeight - 320, 150 + (index % 2) * 10));
+    return {
+      x: startX + index * spreadX,
+      y: startY + (index % 2) * spreadY,
+      rotation: -10 + index * 5
+    };
   }
 
   function getPointerMidpoint(pointers) {
@@ -739,7 +753,8 @@
 
     setTimeout(() => {
       card.remove();
-      drawNextCard();
+      reflowVisibleCards();
+      drawNextCard(4);
       if (deck.length === 0 && !stackArea.querySelector('.card')) {
         emptyState.style.display = 'flex';
         setHint('Deck completed. Shuffle for another round.');
@@ -747,11 +762,11 @@
     }, 720);
   }
 
-  function drawNextCard() {
+  function drawNextCard(slotIndex = 4) {
     updateScoreboard();
     if (deck.length === 0) return;
     const next = deck.pop();
-    createCard(next, deck.length);
+    createCard(next, slotIndex);
     updateScoreboard();
   }
 
@@ -763,10 +778,24 @@
     backZIndex = 1;
 
     const visible = Math.min(5, deck.length);
-    for (let i = 0; i < visible; i++) {
-      drawNextCard();
+    for (let i = visible - 1; i >= 0; i--) {
+      drawNextCard(i);
     }
     updateScoreboard();
+  }
+
+  function reflowVisibleCards() {
+    const cards = Array.from(stackArea.querySelectorAll('.card:not(.done)'));
+    cards.forEach((card, index) => {
+      if (card === activeCard && card._state.dragging) return;
+      const layout = getStackSlot(index);
+      card._state.x = layout.x;
+      card._state.y = layout.y;
+      if (!card._state.flipped) card._state.rotation = layout.rotation;
+      card.style.transition = 'transform 0.35s cubic-bezier(.22,.8,.22,1)';
+      updateCardTransform(card);
+      setTimeout(() => { card.style.transition = ''; }, 350);
+    });
   }
 
   function startGame(shuffleWords = true) {
