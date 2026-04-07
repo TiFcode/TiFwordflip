@@ -325,7 +325,7 @@
     <div class="topbar">
       <div class="titlebox">
         <h1>🇬🇧 ⇄ 🇩🇪 TiFwordflip</h1>
-        <p>Tap a card to reveal the German word. If you knew it before reveal, throw it right. If not, throw it left.</p>
+        <p>Tap to activate a card. Tap again to reveal the German translation.</p>
       </div>
       <div class="scoreboard">
         <div class="score-pill good">
@@ -352,7 +352,7 @@
     </div>
 
     <div class="table-wrap">
-      <div class="hintbar" id="hintBar">Move cards around freely. Swipe right = I knew it. Swipe left = I missed it. Tap to flip when you want to reveal.</div>
+      <div class="hintbar" id="hintBar">Move cards around freely. Tap once to activate a card. Tap again to reveal it.</div>
       <div class="stack-area" id="stackArea"></div>
       <div class="empty-state" id="emptyState">
         <div class="empty-card">
@@ -442,14 +442,14 @@
         <div class="face-inner">
           <span class="lang-chip">English</span>
           <div class="word">${item.en}</div>
-          <div class="subtext">Drag it around, swipe to score, or tap to reveal the German word</div>
+          <div class="subtext">Drag it around or tap again to reveal the German word</div>
         </div>
       </div>
       <div class="card-face card-back">
         <div class="face-inner">
           <div></div>
           <div class="word">${item.de}</div>
-          <div class="subtext">Swipe right if you knew it · left if not</div>
+          <div class="subtext">German translation</div>
         </div>
       </div>
     `;
@@ -550,7 +550,7 @@
     card.classList.add('revealed');
     animateCardBack(card);
     showJudgeButtons(card);
-    setHint(`"${card._state.item.en}" → did you know "${card._state.item.de}"? Swipe right for yes, left for no.`);
+    setHint(`"${card._state.item.en}" → "${card._state.item.de}"`);
   }
 
   function getStackSlot(index) {
@@ -762,9 +762,9 @@
     card.classList.remove('active-card');
     completed.push(finishedItem);
     if (discarded) {
-      setHint(`Discarded "${finishedItem.en}" without scoring it.`);
+      setHint(`Discarded "${finishedItem.en}".`);
     } else {
-      setHint(knewIt ? `Nice. "${finishedItem.en}" → "${finishedItem.de}" counted as correct.` : `No problem. "${finishedItem.en}" → "${finishedItem.de}" counted as wrong.`);
+      setHint(`"${finishedItem.en}" → "${finishedItem.de}" saved.`);
     }
 
     setTimeout(() => {
@@ -806,7 +806,7 @@
     deck = shuffleWords ? shuffle(WORDS) : [...WORDS];
     updateScoreboard();
     layoutInitialCards();
-    setHint('Move cards around freely. Swipe right if you knew the answer, swipe left if you missed it. Tap to reveal when you want.');
+    setHint('Move cards around freely. Tap once to activate a card. Tap again to reveal it.');
   }
 
   document.getElementById('resetBtn').addEventListener('click', () => startGame(true));
