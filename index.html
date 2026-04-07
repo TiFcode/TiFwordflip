@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>TiFwordflip</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; min-height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background:
+      radial-gradient(circle at top, rgba(255,255,255,0.14), transparent 32%),
+      linear-gradient(180deg, #5b4639 0%, #443328 55%, #2f241d 100%);
+    color: #1f1a17;
+    overflow-x: hidden;
+    touch-action: manipulation;
+    min-height: 100vh;
+  }
+
+  .app {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 18px;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: 1.4fr auto auto;
+    gap: 12px;
+    align-items: stretch;
+    margin-bottom: 18px;
+    padding: 12px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.16);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+
+  .titlebox {
+    color: white;
+    min-width: 0;
+  }
+
+  .titlebox h1 {
+    font-size: clamp(28px, 4vw, 42px);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .titlebox p {
+    opacity: 0.95;
+    font-size: 14px;
+  }
+
+  .scoreboard {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .score-pill, .deck-pill {
+    min-width: 120px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.9);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    text-align: center;
+  }
+
+  .score-pill .label, .deck-pill .label {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #745a49;
+    margin-bottom: 6px;
+    font-weight: 700;
+  }
+
+  .score-pill .value, .deck-pill .value {
+    font-size: 28px;
+    font-weight: 800;
+  }
+
+  .score-pill.good .value { color: #15803d; }
+  .score-pill.bad .value { color: #b42318; }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  button {
+    border: none;
+    border-radius: 16px;
+    padding: 14px 18px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+  }
+  button:hover { transform: translateY(-2px); }
+  button:active { transform: scale(0.97); }
+
+  .primary {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: white;
+    box-shadow: 0 10px 24px rgba(79,70,229,0.28);
+  }
+
+  .secondary {
+    background: rgba(255,255,255,0.92);
+    color: #382b23;
+  }
+
+  .table-wrap {
+    position: relative;
+    min-height: calc(100vh - 180px);
+    border-radius: 28px;
+    overflow: hidden;
+    background:
+      repeating-linear-gradient(90deg, transparent, transparent 64px, rgba(0,0,0,0.03) 64px, rgba(0,0,0,0.03) 65px),
+      linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.08));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 24px 60px rgba(0,0,0,0.25);
+  }
+
+  .hintbar {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    width: min(94%, 760px);
+    padding: 14px 18px;
+    border-radius: 18px;
+    background: rgba(255,248,235,0.92);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.18);
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: #5f4636;
+  }
+
+  .stack-area {
+    position: relative;
+    width: 100%;
+    min-height: calc(100vh - 180px);
+    overflow: hidden;
+  }
+
+  .card {
+    position: absolute;
+    width: min(30vw, 230px);
+    aspect-ratio: 3 / 4;
+    transform-style: preserve-3d;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: box-shadow 0.2s ease;
+  }
+
+  .card.dragging {
+    cursor: grabbing;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+  }
+
+  .card-face {
+    position: absolute;
+    inset: 0;
+    border-radius: 24px;
+    backface-visibility: hidden;
+    overflow: hidden;
+    box-shadow: 0 14px 34px rgba(0,0,0,0.24);
+    border: 10px solid #fff7ef;
+  }
+
+  .card-front {
+    background: linear-gradient(180deg, #fffdf8 0%, #fff1d9 100%);
+  }
+
+  .card-back {
+    transform: rotateY(180deg);
+    background: linear-gradient(180deg, #eef6ff 0%, #d8e8ff 100%);
+  }
+
+  .face-inner {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 18px;
+  }
+
+  .lang-chip {
+    align-self: flex-start;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: rgba(255,255,255,0.84);
+    color: #6a4b33;
+  }
+
+  .word {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 900;
+    line-height: 1.05;
+    padding: 8px;
+    color: #2b211b;
+  }
+
+  .subtext {
+    text-align: center;
+    font-size: 14px;
+    color: #7a6251;
+    font-weight: 700;
+  }
+
+  .swipe-badge {
+    position: absolute;
+    bottom: 14px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 900;
+    color: white;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.18s ease;
+    pointer-events: none;
+  }
+
+  .swipe-badge.left {
+    left: 14px;
+    background: #c2410c;
+  }
+  .swipe-badge.right {
+    right: 14px;
+    background: #15803d;
+  }
+
+  .card.revealed .swipe-badge,
+  .card.dragging .swipe-badge {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .card.done {
+    pointer-events: none;
+  }
+
+  .controls-bottom {
+    position: absolute;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    z-index: 4;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .judge-btn {
+    min-width: 160px;
+    font-size: 16px;
+  }
+
+  .judge-btn.good {
+    background: linear-gradient(135deg, #22c55e, #15803d);
+    color: white;
+  }
+
+  .judge-btn.bad {
+    background: linear-gradient(135deg, #f97316, #c2410c);
+    color: white;
+  }
+
+  .empty-state {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+    z-index: 5;
+  }
+
+  .empty-card {
+    max-width: 560px;
+    background: rgba(255,255,255,0.94);
+    border-radius: 26px;
+    padding: 28px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.24);
+  }
+
+  .empty-card h2 { font-size: 36px; margin-bottom: 10px; }
+  .empty-card p { font-size: 18px; color: #5e4d43; margin-bottom: 20px; }
+
+  @media (max-width: 900px) {
+    .topbar {
+      grid-template-columns: 1fr;
+    }
+    .controls { justify-content: stretch; }
+    .controls button { flex: 1; }
+    .scoreboard { justify-content: center; }
+  }
+
+  @media (max-width: 640px) {
+    .app { padding: 12px; }
+    .table-wrap, .stack-area { min-height: calc(100vh - 220px); }
+    .card { width: min(42vw, 190px); }
+    .hintbar { font-size: 13px; padding: 12px 14px; }
+    .judge-btn { min-width: 140px; }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="titlebox">
+        <h1>🇬🇧 ⇄ 🇩🇪 TiFwordflip</h1>
+        <p>Tap a card to reveal the German word. If you knew it before reveal, throw it right. If not, throw it left.</p>
+      </div>
+      <div class="scoreboard">
+        <div class="score-pill good">
+          <span class="label">Correct</span>
+          <span class="value" id="correctCount">0</span>
+        </div>
+        <div class="score-pill bad">
+          <span class="label">Wrong</span>
+          <span class="value" id="wrongCount">0</span>
+        </div>
+        <div class="deck-pill">
+          <span class="label">Remaining</span>
+          <span class="value" id="remainingCount">0</span>
+        </div>
+      </div>
+      <div class="controls">
+        <button class="secondary" id="shuffleBtn">🔀 Shuffle</button>
+        <button class="primary" id="resetBtn">♻️ Restart</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="hintbar" id="hintBar">Tap a card to flip it. After reveal: swipe right = I knew it, swipe left = I missed it.</div>
+      <div class="stack-area" id="stackArea"></div>
+      <div class="controls-bottom" id="judgeControls" hidden>
+        <button class="judge-btn bad" id="wrongBtn">⬅️ I missed it</button>
+        <button class="judge-btn good" id="correctBtn">I knew it ➡️</button>
+      </div>
+      <div class="empty-state" id="emptyState">
+        <div class="empty-card">
+          <h2>Deck finished 🎉</h2>
+          <p>You went through all the cards. Shuffle and go again for another round.</p>
+          <button class="primary" id="playAgainBtn">Play again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  'use strict';
+
+  const WORDS = [
+    ['apple', 'Apfel'], ['house', 'Haus'], ['car', 'Auto'], ['dog', 'Hund'], ['cat', 'Katze'],
+    ['book', 'Buch'], ['water', 'Wasser'], ['bread', 'Brot'], ['sun', 'Sonne'], ['moon', 'Mond'],
+    ['school', 'Schule'], ['friend', 'Freund'], ['family', 'Familie'], ['window', 'Fenster'], ['door', 'Tür'],
+    ['chair', 'Stuhl'], ['table', 'Tisch'], ['flower', 'Blume'], ['tree', 'Baum'], ['bird', 'Vogel'],
+    ['milk', 'Milch'], ['cheese', 'Käse'], ['train', 'Zug'], ['street', 'Straße'], ['garden', 'Garten'],
+    ['kitchen', 'Küche'], ['bed', 'Bett'], ['shirt', 'Hemd'], ['shoe', 'Schuh'], ['rain', 'Regen'],
+    ['snow', 'Schnee'], ['summer', 'Sommer'], ['winter', 'Winter'], ['morning', 'Morgen'], ['night', 'Nacht'],
+    ['schoolbag', 'Schultasche'], ['picture', 'Bild'], ['clock', 'Uhr'], ['ball', 'Ball'], ['game', 'Spiel']
+  ].map(([en, de], index) => ({ id: index + 1, en, de }));
+
+  const stackArea = document.getElementById('stackArea');
+  const correctEl = document.getElementById('correctCount');
+  const wrongEl = document.getElementById('wrongCount');
+  const remainingEl = document.getElementById('remainingCount');
+  const hintBar = document.getElementById('hintBar');
+  const emptyState = document.getElementById('emptyState');
+  const judgeControls = document.getElementById('judgeControls');
+  const wrongBtn = document.getElementById('wrongBtn');
+  const correctBtn = document.getElementById('correctBtn');
+
+  let zIndex = 1;
+  let activeCard = null;
+  let stats = { correct: 0, wrong: 0 };
+  let deck = [];
+  let completed = [];
+
+  function shuffle(arr) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
+  function randomRange(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  function updateScoreboard() {
+    correctEl.textContent = stats.correct;
+    wrongEl.textContent = stats.wrong;
+    remainingEl.textContent = deck.length;
+  }
+
+  function setHint(text) {
+    hintBar.textContent = text;
+  }
+
+  function hideJudgeButtons() {
+    judgeControls.hidden = true;
+  }
+
+  function showJudgeButtons(card) {
+    if (!card) return;
+    judgeControls.hidden = false;
+  }
+
+  function createCard(item, index) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = item.id;
+    card.innerHTML = `
+      <div class="card-face card-front">
+        <div class="face-inner">
+          <span class="lang-chip">English</span>
+          <div class="word">${item.en}</div>
+          <div class="subtext">Tap to reveal the German word</div>
+        </div>
+      </div>
+      <div class="card-face card-back">
+        <div class="face-inner">
+          <span class="lang-chip">Deutsch</span>
+          <div class="word">${item.de}</div>
+          <div class="subtext">Swipe right if you knew it · left if not</div>
+        </div>
+      </div>
+      <div class="swipe-badge left">⬅️ Missed it</div>
+      <div class="swipe-badge right">Knew it ➡️</div>
+    `;
+
+    const baseX = randomRange(30, Math.max(40, stackArea.clientWidth - 280));
+    const baseY = randomRange(90, Math.max(120, stackArea.clientHeight - 340));
+    const rotation = randomRange(-16, 16);
+
+    card._state = {
+      x: baseX,
+      y: baseY,
+      rotation,
+      flipped: false,
+      judged: false,
+      dragging: false,
+      startX: 0,
+      startY: 0,
+      pointerId: null,
+      originX: baseX,
+      originY: baseY,
+      originRotation: rotation,
+      item,
+      velocityX: 0,
+      velocityY: 0,
+      lastMoveX: 0,
+      lastMoveY: 0,
+      lastTime: 0
+    };
+
+    card.style.zIndex = zIndex++;
+    updateCardTransform(card);
+    attachCardEvents(card);
+    stackArea.appendChild(card);
+    return card;
+  }
+
+  function updateCardTransform(card) {
+    const s = card._state;
+    const flip = s.flipped ? ' rotateY(180deg)' : '';
+    card.style.transform = `translate(${s.x}px, ${s.y}px) rotate(${s.rotation}deg)${flip}`;
+  }
+
+  function attachCardEvents(card) {
+    card.addEventListener('pointerdown', (e) => onPointerDown(card, e));
+    card.addEventListener('click', (e) => {
+      if (card._state.dragging || card._state.judged) return;
+      if (Math.abs(card._state.x - card._state.originX) > 8 || Math.abs(card._state.y - card._state.originY) > 8) return;
+      if (!card._state.flipped) revealCard(card);
+    });
+  }
+
+  function revealCard(card) {
+    if (activeCard && activeCard !== card) return;
+    card._state.flipped = true;
+    activeCard = card;
+    card.classList.add('revealed');
+    card.style.zIndex = zIndex++;
+    updateCardTransform(card);
+    showJudgeButtons(card);
+    setHint(`"${card._state.item.en}" → did you know "${card._state.item.de}"? Swipe right for yes, left for no.`);
+  }
+
+  function onPointerDown(card, e) {
+    if (card._state.judged) return;
+    if (activeCard && activeCard !== card && activeCard._state.flipped) return;
+
+    if (!card._state.flipped) {
+      card._state.originX = card._state.x;
+      card._state.originY = card._state.y;
+      return;
+    }
+
+    e.preventDefault();
+    card.setPointerCapture(e.pointerId);
+    card._state.dragging = true;
+    card._state.pointerId = e.pointerId;
+    card._state.startX = e.clientX;
+    card._state.startY = e.clientY;
+    card._state.originX = card._state.x;
+    card._state.originY = card._state.y;
+    card._state.originRotation = card._state.rotation;
+    card._state.velocityX = 0;
+    card._state.velocityY = 0;
+    card._state.lastMoveX = e.clientX;
+    card._state.lastMoveY = e.clientY;
+    card._state.lastTime = performance.now();
+    card.classList.add('dragging');
+    card.style.zIndex = zIndex++;
+
+    const move = (ev) => onPointerMove(card, ev);
+    const up = (ev) => onPointerUp(card, ev, move, up);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  }
+
+  function onPointerMove(card, e) {
+    if (!card._state.dragging || e.pointerId !== card._state.pointerId) return;
+    const dx = e.clientX - card._state.startX;
+    const dy = e.clientY - card._state.startY;
+    card._state.x = card._state.originX + dx;
+    card._state.y = card._state.originY + dy;
+    card._state.rotation = card._state.originRotation + dx * 0.05;
+
+    const now = performance.now();
+    const dt = Math.max((now - card._state.lastTime) / 1000, 0.001);
+    card._state.velocityX = (e.clientX - card._state.lastMoveX) / dt;
+    card._state.velocityY = (e.clientY - card._state.lastMoveY) / dt;
+    card._state.lastMoveX = e.clientX;
+    card._state.lastMoveY = e.clientY;
+    card._state.lastTime = now;
+
+    updateCardTransform(card);
+  }
+
+  function onPointerUp(card, e, move, up) {
+    if (e.pointerId !== card._state.pointerId) return;
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    window.removeEventListener('pointercancel', up);
+    card.classList.remove('dragging');
+    card._state.dragging = false;
+
+    const dx = card._state.x - card._state.originX;
+    const strongThrow = Math.abs(dx) > 110 || Math.abs(card._state.velocityX) > 850;
+
+    if (strongThrow) {
+      const direction = dx >= 0 ? 'right' : 'left';
+      judgeCard(card, direction === 'right');
+      return;
+    }
+
+    card._state.x = card._state.originX;
+    card._state.y = card._state.originY;
+    card._state.rotation = card._state.originRotation;
+    card.style.transition = 'transform 0.22s ease';
+    updateCardTransform(card);
+    setTimeout(() => { card.style.transition = ''; }, 220);
+  }
+
+  function judgeCard(card, knewIt) {
+    if (!card || card._state.judged) return;
+    card._state.judged = true;
+    card.classList.add('done');
+    hideJudgeButtons();
+
+    if (knewIt) stats.correct += 1;
+    else stats.wrong += 1;
+    updateScoreboard();
+
+    const direction = knewIt ? 1 : -1;
+    const endX = direction > 0 ? window.innerWidth + 260 : -420;
+    const endY = card._state.y + randomRange(-40, 40);
+    const endRot = card._state.rotation + direction * randomRange(18, 34);
+
+    card.style.transition = 'transform 0.42s cubic-bezier(.2,.8,.2,1), opacity 0.42s ease';
+    card._state.x = endX;
+    card._state.y = endY;
+    card._state.rotation = endRot;
+    card.style.opacity = '0';
+    updateCardTransform(card);
+
+    const finishedItem = card._state.item;
+    activeCard = null;
+    completed.push(finishedItem);
+    setHint(knewIt ? `Nice. "${finishedItem.en}" → "${finishedItem.de}" counted as correct.` : `No problem. "${finishedItem.en}" → "${finishedItem.de}" counted as wrong.`);
+
+    setTimeout(() => {
+      card.remove();
+      drawNextCard();
+      if (deck.length === 0 && !stackArea.querySelector('.card')) {
+        emptyState.style.display = 'flex';
+        setHint('Deck completed. Shuffle for another round.');
+      }
+    }, 420);
+  }
+
+  function drawNextCard() {
+    updateScoreboard();
+    if (deck.length === 0) return;
+    const next = deck.pop();
+    createCard(next, deck.length);
+    updateScoreboard();
+  }
+
+  function layoutInitialCards() {
+    stackArea.innerHTML = '';
+    emptyState.style.display = 'none';
+    activeCard = null;
+    hideJudgeButtons();
+
+    const visible = Math.min(6, deck.length);
+    for (let i = 0; i < visible; i++) {
+      drawNextCard();
+    }
+    updateScoreboard();
+  }
+
+  function startGame(shuffleWords = true) {
+    stats = { correct: 0, wrong: 0 };
+    completed = [];
+    deck = shuffleWords ? shuffle(WORDS) : [...WORDS];
+    updateScoreboard();
+    layoutInitialCards();
+    setHint('Tap any card to reveal the translation. Then swipe right if you knew it, left if you did not.');
+  }
+
+  wrongBtn.addEventListener('click', () => activeCard && judgeCard(activeCard, false));
+  correctBtn.addEventListener('click', () => activeCard && judgeCard(activeCard, true));
+  document.getElementById('resetBtn').addEventListener('click', () => startGame(true));
+  document.getElementById('shuffleBtn').addEventListener('click', () => startGame(true));
+  document.getElementById('playAgainBtn').addEventListener('click', () => startGame(true));
+  window.addEventListener('resize', () => {
+    if (!stackArea.querySelector('.card')) return;
+    for (const card of stackArea.querySelectorAll('.card')) {
+      card._state.x = Math.min(card._state.x, Math.max(20, stackArea.clientWidth - 260));
+      card._state.y = Math.min(card._state.y, Math.max(80, stackArea.clientHeight - 320));
+      updateCardTransform(card);
+    }
+  });
+
+  startGame(true);
+})();
+</script>
+</body>
+</html>
