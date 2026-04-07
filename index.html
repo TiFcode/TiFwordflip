@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>TiFwordflip</title>
+<meta property="og:title" content="TiFwordflip">
+<meta property="og:description" content="English to German flip-card learning game with self-scoring swipes.">
+<meta property="og:type" content="website">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: 100%; min-height: 100%; }
@@ -159,11 +162,11 @@
     width: min(30vw, 230px);
     aspect-ratio: 3 / 4;
     transform-style: preserve-3d;
-    cursor: pointer;
+    cursor: grab;
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;
-    transition: box-shadow 0.2s ease;
+    transition: box-shadow 0.28s ease;
   }
 
   .card.dragging {
@@ -247,13 +250,14 @@
 
   .swipe-badge.left {
     left: 14px;
-    background: #c2410c;
+    background: #15803d;
   }
   .swipe-badge.right {
     right: 14px;
-    background: #15803d;
+    background: #c2410c;
   }
 
+  .card:hover .swipe-badge,
   .card.revealed .swipe-badge,
   .card.dragging .swipe-badge {
     opacity: 1;
@@ -359,11 +363,11 @@
     </div>
 
     <div class="table-wrap">
-      <div class="hintbar" id="hintBar">Tap a card to flip it. After reveal: swipe right = I knew it, swipe left = I missed it.</div>
+      <div class="hintbar" id="hintBar">Move cards around freely. Swipe left = I knew it. Swipe right = I missed it. Tap to flip when you want to reveal.</div>
       <div class="stack-area" id="stackArea"></div>
       <div class="controls-bottom" id="judgeControls" hidden>
-        <button class="judge-btn bad" id="wrongBtn">⬅️ I missed it</button>
-        <button class="judge-btn good" id="correctBtn">I knew it ➡️</button>
+        <button class="judge-btn good" id="correctBtn">⬅️ I knew it</button>
+        <button class="judge-btn bad" id="wrongBtn">I missed it ➡️</button>
       </div>
       <div class="empty-state" id="emptyState">
         <div class="empty-card">
@@ -447,18 +451,18 @@
         <div class="face-inner">
           <span class="lang-chip">English</span>
           <div class="word">${item.en}</div>
-          <div class="subtext">Tap to reveal the German word</div>
+          <div class="subtext">Drag it around, swipe to score, or tap to reveal the German word</div>
         </div>
       </div>
       <div class="card-face card-back">
         <div class="face-inner">
           <span class="lang-chip">Deutsch</span>
           <div class="word">${item.de}</div>
-          <div class="subtext">Swipe right if you knew it · left if not</div>
+          <div class="subtext">Swipe left if you knew it · right if not</div>
         </div>
       </div>
-      <div class="swipe-badge left">⬅️ Missed it</div>
-      <div class="swipe-badge right">Knew it ➡️</div>
+      <div class="swipe-badge left">⬅️ Knew it</div>
+      <div class="swipe-badge right">Missed it ➡️</div>
     `;
 
     const baseX = randomRange(30, Math.max(40, stackArea.clientWidth - 280));
@@ -483,7 +487,9 @@
       velocityY: 0,
       lastMoveX: 0,
       lastMoveY: 0,
-      lastTime: 0
+      lastTime: 0,
+      moved: false,
+      revealPending: false
     };
 
     card.style.zIndex = zIndex++;
@@ -499,11 +505,16 @@
     card.style.transform = `translate(${s.x}px, ${s.y}px) rotate(${s.rotation}deg)${flip}`;
   }
 
+  function animateCardBack(card) {
+    card.style.transition = 'transform 0.65s cubic-bezier(.22,.8,.22,1), box-shadow 0.28s ease';
+    updateCardTransform(card);
+    setTimeout(() => { card.style.transition = ''; }, 650);
+  }
+
   function attachCardEvents(card) {
     card.addEventListener('pointerdown', (e) => onPointerDown(card, e));
-    card.addEventListener('click', (e) => {
-      if (card._state.dragging || card._state.judged) return;
-      if (Math.abs(card._state.x - card._state.originX) > 8 || Math.abs(card._state.y - card._state.originY) > 8) return;
+    card.addEventListener('click', () => {
+      if (card._state.dragging || card._state.judged || card._state.moved) return;
       if (!card._state.flipped) revealCard(card);
     });
   }
@@ -514,20 +525,14 @@
     activeCard = card;
     card.classList.add('revealed');
     card.style.zIndex = zIndex++;
-    updateCardTransform(card);
+    animateCardBack(card);
     showJudgeButtons(card);
-    setHint(`"${card._state.item.en}" → did you know "${card._state.item.de}"? Swipe right for yes, left for no.`);
+    setHint(`"${card._state.item.en}" → did you know "${card._state.item.de}"? Swipe left for yes, right for no.`);
   }
 
   function onPointerDown(card, e) {
     if (card._state.judged) return;
     if (activeCard && activeCard !== card && activeCard._state.flipped) return;
-
-    if (!card._state.flipped) {
-      card._state.originX = card._state.x;
-      card._state.originY = card._state.y;
-      return;
-    }
 
     e.preventDefault();
     card.setPointerCapture(e.pointerId);
@@ -543,6 +548,8 @@
     card._state.lastMoveX = e.clientX;
     card._state.lastMoveY = e.clientY;
     card._state.lastTime = performance.now();
+    card._state.moved = false;
+    card._state.revealPending = !card._state.flipped;
     card.classList.add('dragging');
     card.style.zIndex = zIndex++;
 
@@ -560,6 +567,11 @@
     card._state.x = card._state.originX + dx;
     card._state.y = card._state.originY + dy;
     card._state.rotation = card._state.originRotation + dx * 0.05;
+
+    if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+      card._state.moved = true;
+      card._state.revealPending = false;
+    }
 
     const now = performance.now();
     const dt = Math.max((now - card._state.lastTime) / 1000, 0.001);
@@ -584,17 +596,23 @@
     const strongThrow = Math.abs(dx) > 110 || Math.abs(card._state.velocityX) > 850;
 
     if (strongThrow) {
-      const direction = dx >= 0 ? 'right' : 'left';
-      judgeCard(card, direction === 'right');
+      const knewIt = dx < 0;
+      judgeCard(card, knewIt);
+      return;
+    }
+
+    if (card._state.revealPending && !card._state.moved && !card._state.flipped) {
+      revealCard(card);
+      card._state.revealPending = false;
       return;
     }
 
     card._state.x = card._state.originX;
     card._state.y = card._state.originY;
     card._state.rotation = card._state.originRotation;
-    card.style.transition = 'transform 0.22s ease';
+    card.style.transition = 'transform 0.38s cubic-bezier(.22,.8,.22,1)';
     updateCardTransform(card);
-    setTimeout(() => { card.style.transition = ''; }, 220);
+    setTimeout(() => { card.style.transition = ''; }, 380);
   }
 
   function judgeCard(card, knewIt) {
@@ -607,12 +625,12 @@
     else stats.wrong += 1;
     updateScoreboard();
 
-    const direction = knewIt ? 1 : -1;
+    const direction = knewIt ? -1 : 1;
     const endX = direction > 0 ? window.innerWidth + 260 : -420;
     const endY = card._state.y + randomRange(-40, 40);
     const endRot = card._state.rotation + direction * randomRange(18, 34);
 
-    card.style.transition = 'transform 0.42s cubic-bezier(.2,.8,.2,1), opacity 0.42s ease';
+    card.style.transition = 'transform 0.72s cubic-bezier(.22,.8,.22,1), opacity 0.72s ease';
     card._state.x = endX;
     card._state.y = endY;
     card._state.rotation = endRot;
@@ -631,7 +649,7 @@
         emptyState.style.display = 'flex';
         setHint('Deck completed. Shuffle for another round.');
       }
-    }, 420);
+    }, 720);
   }
 
   function drawNextCard() {
@@ -661,7 +679,7 @@
     deck = shuffleWords ? shuffle(WORDS) : [...WORDS];
     updateScoreboard();
     layoutInitialCards();
-    setHint('Tap any card to reveal the translation. Then swipe right if you knew it, left if you did not.');
+    setHint('Move cards around freely. Swipe left if you knew the answer, swipe right if you missed it. Tap to reveal when you want.');
   }
 
   wrongBtn.addEventListener('click', () => activeCard && judgeCard(activeCard, false));
