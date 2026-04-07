@@ -167,6 +167,7 @@
     user-select: none;
     -webkit-user-select: none;
     transition: box-shadow 0.28s ease;
+    will-change: transform;
   }
 
   .card.dragging {
@@ -250,11 +251,11 @@
 
   .swipe-badge.left {
     left: 14px;
-    background: #15803d;
+    background: #c2410c;
   }
   .swipe-badge.right {
     right: 14px;
-    background: #c2410c;
+    background: #15803d;
   }
 
   .card:hover .swipe-badge,
@@ -479,15 +480,14 @@
       x: baseX,
       y: baseY,
       rotation,
+      scale: 1,
       flipped: false,
       judged: false,
       dragging: false,
-      startX: 0,
-      startY: 0,
-      pointerId: null,
       originX: baseX,
       originY: baseY,
       originRotation: rotation,
+      originScale: 1,
       item,
       velocityX: 0,
       velocityY: 0,
@@ -495,7 +495,12 @@
       lastMoveY: 0,
       lastTime: 0,
       moved: false,
-      revealPending: false
+      revealPending: false,
+      pointers: new Map(),
+      startMidX: 0,
+      startMidY: 0,
+      startDistance: 0,
+      startAngle: 0
     };
 
     card.style.zIndex = '1';
@@ -508,7 +513,7 @@
   function updateCardTransform(card) {
     const s = card._state;
     const flip = s.flipped ? ' rotateY(180deg)' : '';
-    card.style.transform = `translate(${s.x}px, ${s.y}px) rotate(${s.rotation}deg)${flip}`;
+    card.style.transform = `translate(${s.x}px, ${s.y}px) rotate(${s.rotation}deg) scale(${s.scale})${flip}`;
   }
 
   function animateCardBack(card) {
@@ -519,6 +524,9 @@
 
   function attachCardEvents(card) {
     card.addEventListener('pointerdown', (e) => onPointerDown(card, e));
+    card.addEventListener('pointermove', (e) => onPointerMove(card, e));
+    card.addEventListener('pointerup', (e) => onPointerUp(card, e));
+    card.addEventListener('pointercancel', (e) => onPointerUp(card, e));
     card.addEventListener('click', () => {
       bringCardToFront(card);
       if (card._state.dragging || card._state.judged || card._state.moved) return;
@@ -540,6 +548,24 @@
     setHint(`"${card._state.item.en}" → did you know "${card._state.item.de}"? Swipe right for yes, left for no.`);
   }
 
+  function getPointerMidpoint(pointers) {
+    let sx = 0, sy = 0;
+    pointers.forEach(p => { sx += p.x; sy += p.y; });
+    return { x: sx / pointers.size, y: sy / pointers.size };
+  }
+
+  function getPointerDistance(pointers) {
+    const pts = Array.from(pointers.values());
+    if (pts.length < 2) return 0;
+    return Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+  }
+
+  function getPointerAngle(pointers) {
+    const pts = Array.from(pointers.values());
+    if (pts.length < 2) return 0;
+    return Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x) * 180 / Math.PI;
+  }
+
   function onPointerDown(card, e) {
     if (card._state.judged) return;
 
@@ -547,13 +573,12 @@
     bringCardToFront(card);
     activeCard = card;
     card.setPointerCapture(e.pointerId);
+    card._state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     card._state.dragging = true;
-    card._state.pointerId = e.pointerId;
-    card._state.startX = e.clientX;
-    card._state.startY = e.clientY;
     card._state.originX = card._state.x;
     card._state.originY = card._state.y;
     card._state.originRotation = card._state.rotation;
+    card._state.originScale = card._state.scale;
     card._state.velocityX = 0;
     card._state.velocityY = 0;
     card._state.lastMoveX = e.clientX;
@@ -561,52 +586,79 @@
     card._state.lastTime = performance.now();
     card._state.moved = false;
     card._state.revealPending = !card._state.flipped;
+
+    const mid = getPointerMidpoint(card._state.pointers);
+    card._state.startMidX = mid.x;
+    card._state.startMidY = mid.y;
+    card._state.startDistance = getPointerDistance(card._state.pointers);
+    card._state.startAngle = getPointerAngle(card._state.pointers);
+
     card.classList.add('dragging');
     card.style.zIndex = zIndex++;
-
-    const move = (ev) => onPointerMove(card, ev);
-    const up = (ev) => onPointerUp(card, ev, move, up);
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', up);
   }
 
   function onPointerMove(card, e) {
-    if (!card._state.dragging || e.pointerId !== card._state.pointerId) return;
-    const dx = e.clientX - card._state.startX;
-    const dy = e.clientY - card._state.startY;
+    if (!card._state.dragging || !card._state.pointers.has(e.pointerId)) return;
+    card._state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    const pointers = card._state.pointers;
+    const mid = getPointerMidpoint(pointers);
+    const dx = mid.x - card._state.startMidX;
+    const dy = mid.y - card._state.startMidY;
     card._state.x = card._state.originX + dx;
     card._state.y = card._state.originY + dy;
-    card._state.rotation = card._state.originRotation + dx * 0.05;
 
-    if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+    if (pointers.size >= 2) {
+      const distance = getPointerDistance(pointers);
+      const angle = getPointerAngle(pointers);
+      if (card._state.startDistance > 0) {
+        card._state.scale = Math.max(0.85, Math.min(1.45, card._state.originScale * (distance / card._state.startDistance)));
+      }
+      card._state.rotation = card._state.originRotation + (angle - card._state.startAngle);
+    } else {
+      const singlePointer = Array.from(pointers.values())[0];
+      card._state.rotation = card._state.originRotation + dx * 0.05;
+      const now = performance.now();
+      const dt = Math.max((now - card._state.lastTime) / 1000, 0.001);
+      card._state.velocityX = (singlePointer.x - card._state.lastMoveX) / dt;
+      card._state.velocityY = (singlePointer.y - card._state.lastMoveY) / dt;
+      card._state.lastMoveX = singlePointer.x;
+      card._state.lastMoveY = singlePointer.y;
+      card._state.lastTime = now;
+    }
+
+    if (Math.abs(dx) > 6 || Math.abs(dy) > 6 || pointers.size >= 2) {
       card._state.moved = true;
       card._state.revealPending = false;
     }
 
-    const now = performance.now();
-    const dt = Math.max((now - card._state.lastTime) / 1000, 0.001);
-    card._state.velocityX = (e.clientX - card._state.lastMoveX) / dt;
-    card._state.velocityY = (e.clientY - card._state.lastMoveY) / dt;
-    card._state.lastMoveX = e.clientX;
-    card._state.lastMoveY = e.clientY;
-    card._state.lastTime = now;
-
     updateCardTransform(card);
   }
 
-  function onPointerUp(card, e, move, up) {
-    if (e.pointerId !== card._state.pointerId) return;
-    window.removeEventListener('pointermove', move);
-    window.removeEventListener('pointerup', up);
-    window.removeEventListener('pointercancel', up);
+  function onPointerUp(card, e) {
+    if (!card._state.pointers.has(e.pointerId)) return;
+    card._state.pointers.delete(e.pointerId);
+
+    if (card._state.pointers.size > 0) {
+      const mid = getPointerMidpoint(card._state.pointers);
+      card._state.originX = card._state.x;
+      card._state.originY = card._state.y;
+      card._state.originRotation = card._state.rotation;
+      card._state.originScale = card._state.scale;
+      card._state.startMidX = mid.x;
+      card._state.startMidY = mid.y;
+      card._state.startDistance = getPointerDistance(card._state.pointers);
+      card._state.startAngle = getPointerAngle(card._state.pointers);
+      return;
+    }
+
     card.classList.remove('dragging');
     card._state.dragging = false;
 
     const dx = card._state.x - card._state.originX;
     const strongThrow = Math.abs(dx) > 110 || Math.abs(card._state.velocityX) > 850;
 
-    if (strongThrow) {
+    if (strongThrow && card._state.scale <= 1.12) {
       if (!card._state.flipped) {
         judgeCard(card, false, true);
       } else {
@@ -621,13 +673,6 @@
       card._state.revealPending = false;
       return;
     }
-
-    card._state.x = card._state.originX;
-    card._state.y = card._state.originY;
-    card._state.rotation = card._state.originRotation;
-    card.style.transition = 'transform 0.38s cubic-bezier(.22,.8,.22,1)';
-    updateCardTransform(card);
-    setTimeout(() => { card.style.transition = ''; }, 380);
   }
 
   function judgeCard(card, knewIt, discarded = false) {
