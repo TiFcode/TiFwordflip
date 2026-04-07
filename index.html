@@ -594,22 +594,21 @@
 
   function getStackSlot(index) {
     const cardWidth = Math.min(window.innerWidth * 0.30, 230);
-    const isMobile = window.innerWidth < 700;
-    const columns = isMobile ? 2 : 3;
-    const gapX = isMobile ? Math.max(24, cardWidth * 0.18) : Math.max(28, cardWidth * 0.14);
-    const gapY = isMobile ? 28 : 36;
-    const rows = Math.ceil(5 / columns);
-    const layoutWidth = columns * cardWidth + (columns - 1) * gapX;
-    const layoutHeight = rows * (cardWidth * 1.33) + (rows - 1) * gapY;
-    const startX = Math.max(18, (stackArea.clientWidth - layoutWidth) / 2);
-    const startY = Math.max(110, Math.min(stackArea.clientHeight - layoutHeight - 30, 130));
-    const row = Math.floor(index / columns);
-    const col = index % columns;
-    const rowOffset = row % 2 === 0 ? 0 : (isMobile ? cardWidth * 0.18 : cardWidth * 0.12);
+    const cardHeight = cardWidth * (4 / 3);
+    const packX = Math.max(24, Math.min(stackArea.clientWidth - cardWidth - 24, (stackArea.clientWidth - cardWidth) / 2));
+    const packY = Math.max(120, Math.min(stackArea.clientHeight - cardHeight - 40, 150));
+    const offsets = [
+      { x: 0, y: 0, r: -6 },
+      { x: 10, y: 8, r: -3 },
+      { x: 20, y: 14, r: 0 },
+      { x: 30, y: 20, r: 3 },
+      { x: 40, y: 26, r: 6 }
+    ];
+    const offset = offsets[index] || offsets[offsets.length - 1];
     return {
-      x: startX + rowOffset + col * (cardWidth + gapX),
-      y: startY + row * (cardWidth * 1.33 + gapY),
-      rotation: [-8, -3, 4, -5, 7][index] || 0
+      x: packX + offset.x,
+      y: packY + offset.y,
+      rotation: offset.r
     };
   }
 
@@ -819,14 +818,7 @@
   document.getElementById('resetBtn').addEventListener('click', () => startGame(true));
   document.getElementById('shuffleBtn').addEventListener('click', () => startGame(true));
   document.getElementById('playAgainBtn').addEventListener('click', () => startGame(true));
-  window.addEventListener('resize', () => {
-    if (!stackArea.querySelector('.card')) return;
-    for (const card of stackArea.querySelectorAll('.card')) {
-      card._state.x = Math.min(card._state.x, Math.max(20, stackArea.clientWidth - 260));
-      card._state.y = Math.min(card._state.y, Math.max(80, stackArea.clientHeight - 320));
-      updateCardTransform(card);
-    }
-  });
+  window.addEventListener('resize', () => {});
 
   startGame(true);
 })();
