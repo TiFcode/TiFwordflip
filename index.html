@@ -525,9 +525,10 @@
     card.addEventListener('pointercancel', (e) => onPointerUp(card, e));
     card.addEventListener('click', () => {
       if (card._state.judged) return;
+      const wasActive = activeCard === card;
       setActiveCard(card);
       if (card._state.dragging || card._state.moved) return;
-      if (!card._state.flipped) revealCard(card);
+      if (wasActive && !card._state.flipped) revealCard(card);
     });
   }
 
@@ -678,12 +679,7 @@
     card.classList.remove('dragging');
     card._state.dragging = false;
 
-    if (card._state.revealPending && !card._state.moved && !card._state.flipped) {
-      revealCard(card);
-      card._state.revealPending = false;
-      return;
-    }
-
+    card._state.revealPending = false;
     startMomentum(card);
   }
 
