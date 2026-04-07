@@ -774,7 +774,6 @@
 
     setTimeout(() => {
       card.remove();
-      reflowVisibleCards();
       drawNextCard(4);
       if (deck.length === 0 && !stackArea.querySelector('.card')) {
         emptyState.style.display = 'flex';
@@ -804,22 +803,6 @@
       drawNextCard(i);
     }
     updateScoreboard();
-  }
-
-  function reflowVisibleCards() {
-    const cards = Array.from(stackArea.querySelectorAll('.card:not(.done)'));
-    cards.forEach((card, index) => {
-      if (card === activeCard && card._state.dragging) return;
-      const layout = getStackSlot(index);
-      card._state.x = layout.x;
-      card._state.y = layout.y;
-      if (!card._state.flipped) card._state.rotation = layout.rotation;
-      if (!card._state.dragging) card._state.scale = 1;
-      if (card !== activeCard) card.style.zIndex = String(index + 1);
-      card.style.transition = 'transform 0.35s cubic-bezier(.22,.8,.22,1)';
-      updateCardTransform(card);
-      setTimeout(() => { card.style.transition = ''; }, 350);
-    });
   }
 
   function startGame(shuffleWords = true) {
