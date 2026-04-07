@@ -354,10 +354,6 @@
     <div class="table-wrap">
       <div class="hintbar" id="hintBar">Move cards around freely. Swipe right = I knew it. Swipe left = I missed it. Tap to flip when you want to reveal.</div>
       <div class="stack-area" id="stackArea"></div>
-      <div class="controls-bottom" id="judgeControls" hidden>
-        <button class="judge-btn bad" id="wrongBtn">⬅️ I missed it</button>
-        <button class="judge-btn good" id="correctBtn">I knew it ➡️</button>
-      </div>
       <div class="empty-state" id="emptyState">
         <div class="empty-card">
           <h2>Deck finished 🎉</h2>
@@ -402,9 +398,6 @@
   const remainingEl = document.getElementById('remainingCount');
   const hintBar = document.getElementById('hintBar');
   const emptyState = document.getElementById('emptyState');
-  const judgeControls = document.getElementById('judgeControls');
-  const wrongBtn = document.getElementById('wrongBtn');
-  const correctBtn = document.getElementById('correctBtn');
 
   let zIndex = 100;
   let activeCard = null;
@@ -436,14 +429,9 @@
     hintBar.textContent = text;
   }
 
-  function hideJudgeButtons() {
-    judgeControls.hidden = true;
-  }
+  function hideJudgeButtons() {}
 
-  function showJudgeButtons(card) {
-    if (!card) return;
-    judgeControls.hidden = false;
-  }
+  function showJudgeButtons(card) {}
 
   function createCard(item, index) {
     const card = document.createElement('div');
@@ -821,8 +809,6 @@
     setHint('Move cards around freely. Swipe right if you knew the answer, swipe left if you missed it. Tap to reveal when you want.');
   }
 
-  wrongBtn.addEventListener('click', () => activeCard && judgeCard(activeCard, false));
-  correctBtn.addEventListener('click', () => activeCard && judgeCard(activeCard, true));
   document.getElementById('resetBtn').addEventListener('click', () => startGame(true));
   document.getElementById('shuffleBtn').addEventListener('click', () => startGame(true));
   document.getElementById('playAgainBtn').addEventListener('click', () => startGame(true));
