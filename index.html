@@ -440,8 +440,7 @@
   const wrongBtn = document.getElementById('wrongBtn');
   const correctBtn = document.getElementById('correctBtn');
 
-  let zIndex = 10;
-  let backZIndex = 1;
+  let zIndex = 100;
   let activeCard = null;
   let stats = { correct: 0, wrong: 0, discarded: 0 };
   let deck = [];
@@ -535,10 +534,10 @@
       startAngle: 0
     };
 
-    card.style.zIndex = String(backZIndex--);
+    card.style.zIndex = '1';
     updateCardTransform(card);
     attachCardEvents(card);
-    stackArea.insertBefore(card, stackArea.firstChild);
+    stackArea.appendChild(card);
     return card;
   }
 
@@ -570,9 +569,13 @@
   function setActiveCard(card) {
     if (!card || card._state.judged) return;
     activeCard = card;
-    bringCardToFront(card);
     for (const other of stackArea.querySelectorAll('.card')) {
-      other.classList.toggle('active-card', other === card);
+      if (other === card) {
+        other.style.zIndex = String(zIndex++);
+        other.classList.add('active-card');
+      } else {
+        other.classList.remove('active-card');
+      }
     }
   }
 
@@ -784,8 +787,10 @@
     updateScoreboard();
     if (deck.length === 0) return;
     const next = deck.pop();
-    createCard(next, slotIndex);
+    const card = createCard(next, slotIndex);
+    card.style.zIndex = '1';
     updateScoreboard();
+    return card;
   }
 
   function layoutInitialCards() {
@@ -793,7 +798,6 @@
     emptyState.style.display = 'none';
     activeCard = null;
     hideJudgeButtons();
-    backZIndex = 1;
 
     const visible = Math.min(5, deck.length);
     for (let i = visible - 1; i >= 0; i--) {
@@ -811,6 +815,7 @@
       card._state.y = layout.y;
       if (!card._state.flipped) card._state.rotation = layout.rotation;
       if (!card._state.dragging) card._state.scale = 1;
+      if (card !== activeCard) card.style.zIndex = String(index + 1);
       card.style.transition = 'transform 0.35s cubic-bezier(.22,.8,.22,1)';
       updateCardTransform(card);
       setTimeout(() => { card.style.transition = ''; }, 350);
