@@ -415,6 +415,7 @@
   const correctBtn = document.getElementById('correctBtn');
 
   let zIndex = 10;
+  let backZIndex = 1;
   let activeCard = null;
   let stats = { correct: 0, wrong: 0, discarded: 0 };
   let deck = [];
@@ -507,10 +508,10 @@
       startAngle: 0
     };
 
-    card.style.zIndex = '1';
+    card.style.zIndex = String(backZIndex--);
     updateCardTransform(card);
     attachCardEvents(card);
-    stackArea.appendChild(card);
+    stackArea.insertBefore(card, stackArea.firstChild);
     return card;
   }
 
@@ -725,8 +726,7 @@
     updateScoreboard();
     if (deck.length === 0) return;
     const next = deck.pop();
-    const card = createCard(next, deck.length);
-    card.style.zIndex = '1';
+    createCard(next, deck.length);
     updateScoreboard();
   }
 
@@ -735,6 +735,7 @@
     emptyState.style.display = 'none';
     activeCard = null;
     hideJudgeButtons();
+    backZIndex = 1;
 
     const visible = Math.min(6, deck.length);
     for (let i = 0; i < visible; i++) {
