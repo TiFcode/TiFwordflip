@@ -595,20 +595,15 @@
   function getStackSlot(index) {
     const cardWidth = Math.min(window.innerWidth * 0.30, 230);
     const cardHeight = cardWidth * (4 / 3);
-    const packX = Math.max(24, Math.min(stackArea.clientWidth - cardWidth - 24, (stackArea.clientWidth - cardWidth) / 2));
-    const packY = Math.max(120, Math.min(stackArea.clientHeight - cardHeight - 40, 150));
-    const offsets = [
-      { x: 0, y: 0, r: -6 },
-      { x: 10, y: 8, r: -3 },
-      { x: 20, y: 14, r: 0 },
-      { x: 30, y: 20, r: 3 },
-      { x: 40, y: 26, r: 6 }
-    ];
-    const offset = offsets[index] || offsets[offsets.length - 1];
+    const marginX = 18;
+    const marginTop = 110;
+    const marginBottom = 28;
+    const maxX = Math.max(marginX, stackArea.clientWidth - cardWidth - marginX);
+    const maxY = Math.max(marginTop, stackArea.clientHeight - cardHeight - marginBottom);
     return {
-      x: packX + offset.x,
-      y: packY + offset.y,
-      rotation: offset.r
+      x: randomRange(marginX, maxX),
+      y: randomRange(marginTop, maxY),
+      rotation: randomRange(-15, 15)
     };
   }
 
@@ -719,9 +714,13 @@
     card._state.dragging = false;
 
     const dx = card._state.x - card._state.originX;
-    const strongThrow = Math.abs(dx) > 110 || Math.abs(card._state.velocityX) > 850;
+    const cardWidth = Math.min(window.innerWidth * 0.30, 230) * card._state.scale;
+    const cardHeight = Math.min(window.innerWidth * 0.30, 230) * (4 / 3) * card._state.scale;
+    const centerX = card._state.x + cardWidth / 2;
+    const centerY = card._state.y + cardHeight / 2;
+    const centerOutside = centerX < 0 || centerX > stackArea.clientWidth || centerY < 0 || centerY > stackArea.clientHeight;
 
-    if (strongThrow && card._state.scale <= 1.12) {
+    if (centerOutside && card._state.scale <= 1.12) {
       if (!card._state.flipped) {
         judgeCard(card, false, true);
       } else {
