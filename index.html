@@ -518,6 +518,7 @@
       item,
       velocityX: 0,
       velocityY: 0,
+      momentumFrame: null,
       lastMoveX: 0,
       lastMoveY: 0,
       lastTime: 0,
@@ -709,28 +710,67 @@
     card.classList.remove('dragging');
     card._state.dragging = false;
 
-    const dx = card._state.x - card._state.originX;
-    const cardWidth = Math.min(window.innerWidth * 0.30, 230) * card._state.scale;
-    const cardHeight = Math.min(window.innerWidth * 0.30, 230) * (4 / 3) * card._state.scale;
-    const centerX = card._state.x + cardWidth / 2;
-    const centerY = card._state.y + cardHeight / 2;
-    const centerOutside = centerX < 0 || centerX > stackArea.clientWidth || centerY < 0 || centerY > stackArea.clientHeight;
-
-    if (centerOutside && card._state.scale <= 1.12) {
-      if (!card._state.flipped) {
-        judgeCard(card, false, true);
-      } else {
-        const knewIt = dx > 0;
-        judgeCard(card, knewIt, false);
-      }
-      return;
-    }
-
     if (card._state.revealPending && !card._state.moved && !card._state.flipped) {
       revealCard(card);
       card._state.revealPending = false;
       return;
     }
+
+    startMomentum(card);
+  }
+
+  function startMomentum(card) {
+    if (card._state.momentumFrame) cancelAnimationFrame(card._state.momentumFrame);
+
+    let vx = Math.max(-1400, Math.min(1400, card._state.velocityX));
+    let vy = Math.max(-1400, Math.min(1400, card._state.velocityY));
+    let lastTs = performance.now();
+    const friction = 0.93;
+    const minSpeed = 18;
+
+    const step = (ts) => {
+      const dt = Math.min(0.032, (ts - lastTs) / 1000 || 0.016);
+      lastTs = ts;
+
+      card._state.x += vx * dt;
+      card._state.y += vy * dt;
+      card._state.rotation += vx * 0.01 * dt;
+      updateCardTransform(card);
+
+      const cardWidth = Math.min(window.innerWidth * 0.30, 230) * card._state.scale;
+      const cardHeight = Math.min(window.innerWidth * 0.30, 230) * (4 / 3) * card._state.scale;
+      const centerX = card._state.x + cardWidth / 2;
+      const centerY = card._state.y + cardHeight / 2;
+      const outsideByMargin = centerX < -80 || centerX > stackArea.clientWidth + 80 || centerY < -80 || centerY > stackArea.clientHeight + 80;
+      const strongEnough = Math.abs(vx) > 260 || Math.abs(vy) > 260;
+
+      if (outsideByMargin && strongEnough && card._state.scale <= 1.12) {
+        card._state.momentumFrame = null;
+        const knewIt = vx > 0;
+        if (!card._state.flipped) judgeCard(card, false, true);
+        else judgeCard(card, knewIt, false);
+        return;
+      }
+
+      vx *= friction;
+      vy *= friction;
+      card._state.velocityX = vx;
+      card._state.velocityY = vy;
+
+      if (Math.abs(vx) < minSpeed && Math.abs(vy) < minSpeed) {
+        card._state.momentumFrame = null;
+        return;
+      }
+
+      card._state.momentumFrame = requestAnimationFrame(step);
+    };
+
+    const speed = Math.hypot(vx, vy);
+    if (speed < 80) {
+      card._state.momentumFrame = null;
+      return;
+    }
+    card._state.momentumFrame = requestAnimationFrame(step);
   }
 
   function judgeCard(card, knewIt, discarded = false) {
