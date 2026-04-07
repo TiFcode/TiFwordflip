@@ -363,11 +363,11 @@
     </div>
 
     <div class="table-wrap">
-      <div class="hintbar" id="hintBar">Move cards around freely. Swipe left = I knew it. Swipe right = I missed it. Tap to flip when you want to reveal.</div>
+      <div class="hintbar" id="hintBar">Move cards around freely. Swipe right = I knew it. Swipe left = I missed it. Tap to flip when you want to reveal.</div>
       <div class="stack-area" id="stackArea"></div>
       <div class="controls-bottom" id="judgeControls" hidden>
-        <button class="judge-btn good" id="correctBtn">⬅️ I knew it</button>
-        <button class="judge-btn bad" id="wrongBtn">I missed it ➡️</button>
+        <button class="judge-btn bad" id="wrongBtn">⬅️ I missed it</button>
+        <button class="judge-btn good" id="correctBtn">I knew it ➡️</button>
       </div>
       <div class="empty-state" id="emptyState">
         <div class="empty-card">
@@ -458,11 +458,11 @@
         <div class="face-inner">
           <span class="lang-chip">Deutsch</span>
           <div class="word">${item.de}</div>
-          <div class="subtext">Swipe left if you knew it · right if not</div>
+          <div class="subtext">Swipe right if you knew it · left if not</div>
         </div>
       </div>
-      <div class="swipe-badge left">⬅️ Knew it</div>
-      <div class="swipe-badge right">Missed it ➡️</div>
+      <div class="swipe-badge left">⬅️ Missed it</div>
+      <div class="swipe-badge right">Knew it ➡️</div>
     `;
 
     const baseX = randomRange(30, Math.max(40, stackArea.clientWidth - 280));
@@ -527,7 +527,7 @@
     card.style.zIndex = zIndex++;
     animateCardBack(card);
     showJudgeButtons(card);
-    setHint(`"${card._state.item.en}" → did you know "${card._state.item.de}"? Swipe left for yes, right for no.`);
+    setHint(`"${card._state.item.en}" → did you know "${card._state.item.de}"? Swipe right for yes, left for no.`);
   }
 
   function onPointerDown(card, e) {
@@ -596,7 +596,7 @@
     const strongThrow = Math.abs(dx) > 110 || Math.abs(card._state.velocityX) > 850;
 
     if (strongThrow) {
-      const knewIt = dx < 0;
+      const knewIt = dx > 0;
       judgeCard(card, knewIt);
       return;
     }
@@ -625,7 +625,7 @@
     else stats.wrong += 1;
     updateScoreboard();
 
-    const direction = knewIt ? -1 : 1;
+    const direction = knewIt ? 1 : -1;
     const endX = direction > 0 ? window.innerWidth + 260 : -420;
     const endY = card._state.y + randomRange(-40, 40);
     const endRot = card._state.rotation + direction * randomRange(18, 34);
@@ -656,7 +656,8 @@
     updateScoreboard();
     if (deck.length === 0) return;
     const next = deck.pop();
-    createCard(next, deck.length);
+    const card = createCard(next, deck.length);
+    card.style.zIndex = '1';
     updateScoreboard();
   }
 
@@ -679,7 +680,7 @@
     deck = shuffleWords ? shuffle(WORDS) : [...WORDS];
     updateScoreboard();
     layoutInitialCards();
-    setHint('Move cards around freely. Swipe left if you knew the answer, swipe right if you missed it. Tap to reveal when you want.');
+    setHint('Move cards around freely. Swipe right if you knew the answer, swipe left if you missed it. Tap to reveal when you want.');
   }
 
   wrongBtn.addEventListener('click', () => activeCard && judgeCard(activeCard, false));
